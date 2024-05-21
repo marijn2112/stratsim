@@ -31,8 +31,8 @@ Important variables that can be tested with different values are at the top of t
 # Created files
 This section briefly explains all files the code can produce, depending on set variables, all of these files are put in a subfolder named output_files at the location of where this file is run:
 
-reward_function.txt displays on each line the highest rfl reward score found thus far for a run of the game
-best_weight_values.txt displays the best performing weights as found thus far
+- reward_function.txt displays on each line the highest rfl reward score found thus far for a run of the game
+- best_weight_values.txt displays the best performing weights as found thus far
 
 with disable_log set to False (all files relate only to the most recent run of the game):
 - buildings_map_turn_*n*.xlsx displays the amount of buildings in each state at turn *n*, the file shows a grid of all provinces, but as buildings are on state-level all provinces of each state contain the same value.
