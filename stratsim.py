@@ -255,7 +255,7 @@ while run_count > 0:
 			if 'best_rfl_agent' in globals():
 				print("Appplying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
-				agent.weights[weights_names_list[weight_to_change_idx]] = agent.weights[weights_names_list[weight_to_change_idx]] + random.uniform(-5, 5) * min(1 - turn_n/turns_limit, 0.1)	#last part can be comnmented out, used to gradually decrease size of weight modification 
+				agent.weights[weights_names_list[weight_to_change_idx]] = agent.weights[weights_names_list[weight_to_change_idx]] + random.uniform(-5, 5) * max(1 - turn_n/turns_limit, 0.1)	#last part can be comnmented out, used to gradually decrease size of weight modification 
 			elif os.path.isfile("best_weight_values.txt"):
 				print("Using weights file to adjust agents")
 				with open('best_weight_values.txt') as weight_file:
