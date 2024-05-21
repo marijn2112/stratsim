@@ -28,6 +28,18 @@ Notation-wise notably a few times "civ" is as abbreviation for economic industry
 # Configurable variables
 Important variables that can be tested with different values are at the top of their related sections, except the performance-related variables which are at the top of the file.
 
+# Created files
+This section briefly explains all files the code can produce, depending on set variables, all of these files are put in a subfolder named output_files at the location of where this file is run:
+
+reward_function.txt displays on each line the highest rfl reward score found thus far for a run of the game
+best_weight_values.txt displays the best performing weights as found thus far
+
+with disable_log set to False (all files relate only to the most recent run of the game):
+- buildings_map_turn_*n*.xlsx displays the amount of buildings in each state at turn *n*, the file shows a grid of all provinces, but as buildings are on state-level all provinces of each state contain the same value.
+- control_map_turn_*n*.xlsx displays which agent controlled each tile  at turn *n*, this includes occupation during conflict.
+- turn_log.txt stores the most notable events of each turn, including started and ended conflicts and the use of units by all agents.
+- unit_map_turn_*n*.xlsx displays the amount of units present on each tile at turn *n*, due to l
+
 # The rules of the rule-based agents
 This section summarizes the logic set for the rule-based agents:
 - They seek to maintain a ratio of 3:1 ratio of economic vs military buildings, if they are outnumbered by their enemies they will try to build defensive builds where possible and otherwise solely military buildings.
