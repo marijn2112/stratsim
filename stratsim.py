@@ -252,7 +252,7 @@ while run_count > 0:
 	weight_to_change_idx = random.randrange(0, len(weights_names_list))
 	for agent in agents:
 		if agent.action_type == "rfl":
-			if 'best_agent' in globals():
+			if 'best_rfl_agent' in globals():
 				print("Appplying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
 				agent.weights[weight_to_change_idx] = agent.weights[weights_names_list[weight_to_change_idx]] + random.uniform(-5, 5) * min(1 - turn_n/turns_limit, 0.1)	#last part can be comnmented out, used to gradually decrease size of weight modification 
