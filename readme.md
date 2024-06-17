@@ -38,7 +38,7 @@ with disable_log set to False (all files relate only to the most recent run of t
 - buildings_map_turn_*n*.xlsx displays the amount of buildings in each state at turn *n*, the file shows a grid of all provinces, but as buildings are on state-level all provinces of each state contain the same value.
 - control_map_turn_*n*.xlsx displays which agent controlled each tile  at turn *n*, this includes occupation during conflict.
 - turn_log.txt stores the most notable events of each turn, including started and ended conflicts and the use of units by all agents.
-- unit_map_turn_*n*.xlsx displays the amount of units present on each tile at turn *n*, due to some limitations in the Pandas to Excel sheet conversion it is not marked what agent the units belong to, although this can be cross-referenced with the control map and action log for the most part.
+- unit_map_turn_*n*.xlsx displays the amount of units present on each tile at turn *n*, due to some limitations in the Pandas to Excel sheet conversion it is not marked what agent the units belong to, although this can be largely inferred from the control map and action log.
 
 # The rules of the rule-based agents
 This section summarizes the logic set for the rule-based agents:
