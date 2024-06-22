@@ -35,7 +35,6 @@ while run_count > 0:
 			self.y = y
 			self.neighbors = []
 			self.controller = None
-			self.terrain = None
 			self.occupation_counter = None			#tiles of states with defensive buildings take longer become controlled by the enemy even if no units are present
 			self.occupation_timer_agent = None		#to not have different enemies use the same timer, save the agent ID
 		def distance_to(self, other_tile_id):
