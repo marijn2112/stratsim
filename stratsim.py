@@ -13,7 +13,7 @@ os.chdir(output_directory)
 output_file_interval = 150														#because the output files take up a substantial part of the performance of this code, its frequency can be altered here
 disable_log = True																#disable all non-essential output files to save performance and prevent unnecessary disk operations when doing > 1 runs
 turns_limit = 600																#late in the simulation, there maybe a stalemate with many units on the map, and the program will become slower and slower
-run_count = 10																	#how many times to run the game to tweak the RFL agent weights, only after the first run the agent weights are slowly randomized
+run_count = 10																	#how many times to run the game to tweak the RFL agent weights, only after the first run which re-generates the baseline score the agent weights are slowly randomized
 
 
 open('reward_function.txt', 'w').close()
@@ -41,7 +41,7 @@ while run_count > 0:
 		def distance_to(self, other_tile_id):
 			if self.y == provinces[other_tile_id-1].y:
 				distance = abs(self.x-provinces[other_tile_id-1].x)
-			elif self.x == provinces[other_tile_id-1].y:
+			elif self.x == provinces[other_tile_id-1].x:
 				distance = abs(self.y-provinces[other_tile_id-1].y)
 			else:
 				distance = 0
