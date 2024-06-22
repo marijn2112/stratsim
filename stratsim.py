@@ -10,13 +10,22 @@ if not os.path.exists(output_directory):
 	os.makedirs(output_directory)
 os.chdir(output_directory)
 
+
+
+#performance settings, of these only the turn limit and amount of verification runs should impact the weight values directly
 output_file_interval = 150														#because creating output files has a substantial performance impact, its frequency can be altered here
 disable_log = True																#disable all non-essential output files to save performance and prevent unnecessary disk operations when doing > 1 runs
 turns_limit = 600																#late in the simulation, there maybe a stalemate with many units on the map, and the program will become slower and slower
 run_count = 10																	#how many times to run the game to tweak the RFL agent weights, only after the first run which re-generates the baseline score the agent weights are slowly randomized
+verification_runs = 2															#to reduce the impact of agents getting lucky, if set >0, agent performance is averaged over 1+arg runs, decreasing learning speed but hopefully making the learnt weights genuinly better more often
+
 
 
 open('reward_function.txt', 'w').close()
+if run_count > 1:
+	disable_log = True
+change_weight_divisor = verification_runs + 1
+
 while run_count > 0:
 	run_count -= 1
 	start_time = process_time()
@@ -249,14 +258,19 @@ while run_count > 0:
 							 'enemy_units_weight', 'enemies_weight', 'base_conflict', 'neutral_units_weight', 'own_units_weight', 'melee_own_units_prio', 'ranged_own_units_prio']																						#war declaring weights
 
 	weight_to_change_idx = random.randrange(0, len(weights_names_list))
+
+	rlf_agent_idx = 0
 	for agent in agents:
 		if agent.action_type == "rfl":
-			if 'best_rfl_agent' in globals():
-				print("Appplying previous best agent from memory")
+			if 'prev_weights_used' in globals():
+				print("Applying same weights as last run to verify observed reward scores")
+				agent.weights = dict(zip(weights_names_list, prev_weights_used[rlf_agent_idx]))
+			elif 'best_rfl_agent' in globals():
+				print("Applying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
 				agent.weights[weights_names_list[weight_to_change_idx]] += random.uniform(-5, 5) * max(1 - turn_n/turns_limit, 0.1)		#last part can be commented out, used to gradually decrease size of weight modification
 			elif os.path.isfile("best_weight_values.txt"):
-				print("Using weights file to adjust agents")
+				print("Applying weights from best weights file")
 				with open('best_weight_values.txt') as weight_file:
 					weight_values = weight_file.read().splitlines()
 				agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
@@ -264,6 +278,8 @@ while run_count > 0:
 				print("Generating random weights")
 				for key in weights_names_list:
 					agent.weights[key] = random.uniform(-1, 1)
+			rlf_agent_idx += 1
+
 	### Gameplay data
 
 	mil_output = 10		#by default, a military building provides 10 maintenance or unit cost
@@ -365,7 +381,9 @@ while run_count > 0:
 	turn_n = 0
 	while len(agents) > 1:
 		turn_n += 1
-		print("Starting turn ", turn_n)
+
+		if turn_n % 100 == 0:
+			print("Starting turn ", turn_n)
 
 		event_list = []
 
@@ -1118,21 +1136,41 @@ while run_count > 0:
 
 		if turn_n >= turns_limit:
 			break
-	run_time = process_time() - start_time
 
 	for agent in agents:
 		if agent.action_type == "rfl" and agent.rfl_score == None:
 			agent.calculate_reward()
 
-	if 'best_rfl_score' not in globals():	#otherwise compare to the previous best agent, which is still in memory, NOT to be confused with best_score
-		best_rfl_score = None
-		best_rfl_agent = None
-	for agent in agents:
-		if agent.rfl_score != None and (best_rfl_score == None or agent.rfl_score > best_rfl_score):
-			best_rfl_agent = agent
-			best_rfl_score = agent.rfl_score
-	with open("reward_function.txt", "a") as scorefile:
-		scorefile.write(str(best_rfl_score) + "\n")
+	if verification_runs > 0:
+		if 'prev_scores_observed' not in globals():
+			prev_weights_used = []		#list of lists (values of the agent weights dictionary)
+			prev_scores_observed = []	#list of lists (score list for each set of weights)
+			for agent in agents:
+				if agent.action_type == "rfl":
+					prev_weights_used.append(list(agent.weights.values()))
+					prev_scores_observed.append([agent.rfl_score])
+		else:
+			for agent in agents:
+				if agent.action_type == "rfl":
+					prev_scores_observed[prev_weights_used.index(list(agent.weights.values()))].append(agent.rfl_score)
+	if run_count % change_weight_divisor == 0:
+		if 'prev_weights_used' in globals():		#use the average of multiple runs if enabled
+			for agent in agents:
+				if agent.action_type == "rfl":
+					agent.rfl_score = sum(prev_scores_observed[prev_weights_used.index(list(agent.weights.values()))])/len(prev_scores_observed[prev_weights_used.index(list(agent.weights.values()))])
+			del prev_weights_used
+			del prev_scores_observed
+		if 'best_rfl_score' not in globals():	#otherwise compare to the previous best agent, which is still in memory, NOT to be confused with best_score
+			best_rfl_score = None
+			best_rfl_agent = None
+		for agent in agents:
+			if agent.rfl_score != None and (best_rfl_score == None or agent.rfl_score > best_rfl_score):
+				best_rfl_agent = agent
+				best_rfl_score = agent.rfl_score
+		with open("reward_function.txt", "a") as scorefile:
+			scorefile.write(str(best_rfl_score) + "\n")
+
+	run_time = process_time() - start_time
 
 	print("Ended simulation after turn ", turn_n, "it took", run_time, "seconds")
 
