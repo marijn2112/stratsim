@@ -10,7 +10,7 @@ if not os.path.exists(output_directory):
 	os.makedirs(output_directory)
 os.chdir(output_directory)
 
-output_file_interval = 150														#because the output files take up a substantial part of the performance of this code, its frequency can be altered here
+output_file_interval = 150														#because creating output files has a substantial performance impact, its frequency can be altered here
 disable_log = True																#disable all non-essential output files to save performance and prevent unnecessary disk operations when doing > 1 runs
 turns_limit = 600																#late in the simulation, there maybe a stalemate with many units on the map, and the program will become slower and slower
 run_count = 10																	#how many times to run the game to tweak the RFL agent weights, only after the first run which re-generates the baseline score the agent weights are slowly randomized
@@ -138,7 +138,7 @@ while run_count > 0:
 	#the following variables lower the minimum amount of this type an agent should have, the rest is randomly divided
 	base_strength_offset = 1	#independent from mapsize, this offsets the resources of all agents, because agents without resources shouldnt exist, the number without random element below will be 3+this offset
 	strength_difference = 0		#to allow a varying amount of resources per agent
-	size_difference = 1			#to allow a varying amount of states per agent
+	size_difference = 0			#to allow a varying amount of states per agent
 
 	assignable_states_idx = list(range(len(states)))
 	min_size = (len(states) // agent_count) - size_difference #floor division - strength_difference is minimum strength
@@ -254,7 +254,7 @@ while run_count > 0:
 			if 'best_rfl_agent' in globals():
 				print("Appplying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
-				agent.weights[weights_names_list[weight_to_change_idx]] = agent.weights[weights_names_list[weight_to_change_idx]] + random.uniform(-5, 5) * max(1 - turn_n/turns_limit, 0.1)	#last part can be commented out, used to gradually decrease size of weight modification 
+				agent.weights[weights_names_list[weight_to_change_idx]] += random.uniform(-5, 5) * max(1 - turn_n/turns_limit, 0.1)		#last part can be commented out, used to gradually decrease size of weight modification
 			elif os.path.isfile("best_weight_values.txt"):
 				print("Using weights file to adjust agents")
 				with open('best_weight_values.txt') as weight_file:
@@ -1124,7 +1124,7 @@ while run_count > 0:
 		if agent.action_type == "rfl" and agent.rfl_score == None:
 			agent.calculate_reward()
 
-	if not 'best_rfl_score' in globals():	#otherwise compare to the previous best agent, which is still in memory, NOT to be confused with best_score
+	if 'best_rfl_score' not in globals():	#otherwise compare to the previous best agent, which is still in memory, NOT to be confused with best_score
 		best_rfl_score = None
 		best_rfl_agent = None
 	for agent in agents:
