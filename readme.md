@@ -12,11 +12,12 @@ The code file is structured as follows:
 4. Action loop:
 	1. Resetting/recalculation of variables used throughout the turn, such as whether units have been used, application of unit healing/damage based on the amount of industry the agents have compared to their industry.
 	2. Apply or count down to occupation of tiles that have enemy units in them.
-	3. Agents with an empty building/unit queue can pick something to add to it.
-	4. War declaring, first units evaluate their relative strength and then take action based on this.
-	5. Unit movement
-	6. Peace considerations
-	7. Creation/updating of files that keep track of the events of the simulated game
+ 	3. Place buildings/units or count down to their deployment.
+	4. Agents with an empty building/unit queue can pick something to add to it.
+	5. War declaring, first units evaluate their relative strength and then take action based on this.
+	6. Unit movement
+	7. Peace considerations
+	8. Creation/updating of files that keep track of the events of the simulated game
 5. Best RFL weight so far saved to a file
 
 For repeated runs, only parts 2-4 are completed and the best agent is kept in memory until the set amount of runs is complete, only then are its weights saved in step 5.
