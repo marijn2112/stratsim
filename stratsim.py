@@ -5,26 +5,47 @@ import pandas as pd
 #use "pip install openpyxl" in console if the preview saving to excel does not work, importing it should not be necessary
 from time import process_time
 
-output_directory = os.path.dirname(os.path.abspath(__file__))+ "\output_files"	#save output files to the subfolder of the one this file was placed in
+output_directory = os.path.dirname(os.path.abspath(__file__))+ "/output_files"						#save output files to the subfolder of the one this file was placed in
 if not os.path.exists(output_directory):
 	os.makedirs(output_directory)
 os.chdir(output_directory)
 
+output_directory_rlf_vs_rfl = os.path.dirname(os.path.abspath(__file__))+ "/output_files/rfl_vs_rfl"
+
 
 
 #performance settings, of these only the turn limit and amount of verification runs should impact the weight values directly
-output_file_interval = 150														#because creating output files has a substantial performance impact, its frequency can be altered here
-disable_log = True																#disable all non-essential output files to save performance and prevent unnecessary disk operations when doing > 1 runs
-turns_limit = 600																#late in the simulation, there maybe a stalemate with many units on the map, and the program will become slower and slower
-run_count = 10																	#how many times to run the game to tweak the RFL agent weights, only after the first run which re-generates the baseline score the agent weights are slowly randomized
-verification_runs = 2															#to reduce the impact of agents getting lucky, if set >0, agent performance is averaged over 1+arg runs, decreasing learning speed but hopefully making the learnt weights genuinly better more often
+output_file_interval = 150										#because creating output files has a substantial performance impact, its frequency can be altered here
+disable_log = True												#disable all non-essential output files to save performance, this setting is automatically enabled to prevent unnecessary disk operations when doing > 1 runs
+run_count = 10													#how many times to run the game to tweak the RFL agent weights, only after the first run which re-generates the baseline score the agent weights are slowly randomized
+turns_limit = 600												#late in the simulation, there maybe a stalemate with many units on the map, and the program will become slower and slower
+verification_runs = 2											#to reduce the impact of agents getting lucky, if set >0, agent performance is averaged over 1+arg runs, decreasing learning speed but hopefully making the learnt weights genuinly better more often
+
+#rfl settings
+compete_against_old_rfl = False									#if true, replaces rule-based agents with agents using static weights loaded from best_weight_values.txt which will not be used for newly observed better weights, if it doesn't exist, rule-based agents will be defaulted to
+use_rlf_vs_rfl_weights = False									#if true, tries to use weights saved based on rfl vs rfl based performance, either to compare to and possibly improve the rule-based learnt ones, or to continue enhancing them against agents with static weights based on the choice above
 
 
 
-open('reward_function.txt', 'w').close()
-if run_count > 1:
+#sanity checks to prevent unwise/broken settings
+if run_count > 1:												#do not create log files that get overwritten until the last run
 	disable_log = True
+
+if use_rlf_vs_rfl_weights and not os.path.isfile("rfl_vs_rfl/best_weight_values.txt"):										#cannot use rfl weights if they haven't been created
+	print("Weights based on training against other weight-based agents not found, using default weight sources instead")
+	use_rlf_vs_rfl_weights = False
+if compete_against_old_rfl and (not os.path.isfile("best_weight_values.txt")) and (not use_rlf_vs_rfl_weights):				#cannot form agents out of rule-based weights when none found
+	print("Weights based on training against rule-based agents not found, will generate those instead")
+	compete_against_old_rfl = False
+
+if compete_against_old_rfl:
+	if not os.path.exists(output_directory_rlf_vs_rfl):
+		os.makedirs(output_directory_rlf_vs_rfl)
+
 change_weight_divisor = verification_runs + 1
+
+open('reward_function.txt', 'w').close()						#create/clear reward function history file
+has_switched_weights = False
 
 while run_count > 0:
 	run_count -= 1
@@ -142,7 +163,7 @@ while run_count > 0:
 
 	agent_count = 6						#among how many agents is the map divided
 
-	extra_ai_type_reinforcement = 0		#how many agents over 50% should use RFL, will automatically be lowered if set higher than is possibly to apply
+	extra_ai_type_reinforcement = 0		#how many agents over 50% should use RFL, will automatically be lowered if set higher than is possible to apply
 
 	#the following variables lower the minimum amount of this type an agent should have, the rest is randomly divided
 	base_strength_offset = 1	#independent from mapsize, this offsets the resources of all agents, because agents without resources shouldnt exist, the number without random element below will be 3+this offset
@@ -171,6 +192,8 @@ while run_count > 0:
 	for i in range(agent_count):
 		if i in rfl_indexes:
 			ai_types.append('rfl')
+		elif compete_against_old_rfl:
+			ai_types.append('rfl_base')
 		else:
 			ai_types.append('rule')
 
@@ -265,12 +288,27 @@ while run_count > 0:
 			if 'prev_weights_used' in globals():
 				print("Applying same weights as last run to verify observed reward scores")
 				agent.weights = dict(zip(weights_names_list, prev_weights_used[rlf_agent_idx]))
-			elif 'best_rfl_agent' in globals():
+			elif 'best_rfl_agent' in globals() and use_rlf_vs_rfl_weights and (not compete_against_old_rfl) and (not has_switched_weights):
+				print("Applying weights learnt against other weight-using agents to compare to previously loaded ones against rule-based agents.")
+				os.chdir(output_directory_rlf_vs_rfl)
+				with open('best_weight_values.txt') as weight_file:
+					weight_values = weight_file.read().splitlines()
+				agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
+				os.chdir(output_directory)
+				has_switched_weights = True
+			elif 'best_rfl_agent' in globals():																							#only part of this statement that changes the weights
 				print("Applying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
 				agent.weights[weights_names_list[weight_to_change_idx]] += random.uniform(-5, 5) * max(1 - turn_n/turns_limit, 0.1)		#last part can be commented out, used to gradually decrease size of weight modification
+			elif use_rlf_vs_rfl_weights and compete_against_old_rfl:
+				print("Applying weights from best weights file against weight-based agents")
+				os.chdir(output_directory_rlf_vs_rfl)
+				with open('best_weight_values.txt') as weight_file:
+					weight_values = weight_file.read().splitlines()
+				agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
+				os.chdir(output_directory)
 			elif os.path.isfile("best_weight_values.txt"):
-				print("Applying weights from best weights file")
+				print("Applying weights from best weights file against rule-based agents")
 				with open('best_weight_values.txt') as weight_file:
 					weight_values = weight_file.read().splitlines()
 				agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
@@ -279,6 +317,11 @@ while run_count > 0:
 				for key in weights_names_list:
 					agent.weights[key] = random.uniform(-1, 1)
 			rlf_agent_idx += 1
+		elif agent.action_type == "rfl_base":
+			print("Applying weights from best weights file to static agent")
+			with open('best_weight_values.txt') as weight_file:
+				weight_values = weight_file.read().splitlines()
+			agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
 
 	### Gameplay data
 
@@ -620,7 +663,7 @@ while run_count > 0:
 					has_building_slots = True
 				else:
 					has_building_slots = False
-				if agent.action_type == "rfl" and has_building_slots:											#if there is no possibility to choose, go straight to fort-building
+				if (agent.action_type == "rfl" or agent.action_type == "rfl_base") and has_building_slots:											#if there is no possibility to choose, go straight to fort-building
 					military_priority = agent.weights['mil_base'] + (civ_to_mil_ratio * agent.weights['mil_industry_ratio']) + (civ_total_industry * agent.weights['mil_civ_existent']) + (pre_cost_mil_total * agent.weights['mil_mil_existent'])
 					economic_priority = agent.weights['civ_base'] + (civ_to_mil_ratio * agent.weights['civ_industry_ratio']) + (civ_total_industry * agent.weights['civ_civ_existent']) + (pre_cost_mil_total * agent.weights['civ_mil_existent'])
 					defensive_priority=agent.weights['defense_base']+(civ_to_mil_ratio*agent.weights['defense_industry_ratio'])+(civ_total_industry*agent.weights['defense_civ_existent'])+(pre_cost_mil_total*agent.weights['defense_mil_existent'])
@@ -662,7 +705,7 @@ while run_count > 0:
 
 					
 					#actual action
-					if agent.action_type == "rfl":
+					if agent.action_type == "rfl" or agent.action_type == "rfl_base":
 						unit_ranged_prio = agent.weights['base_ranged_prio'] + ranged_units * agent.weights['ranged_built_ranged_prio'] + melee_units * agent.weights['melee_built_ranged_prio'] + unit_type_ratio * agent.weights['unit_ratio_ranged'] + len(agent.units) * agent.weights['ranged_own_units_prio']
 						unit_melee_prio = agent.weights['base_melee_prio']  + ranged_units * agent.weights['ranged_built_melee_prio'] + melee_units * agent.weights['melee_built_melee_prio'] + unit_type_ratio * agent.weights['unit_ratio_melee'] + len(agent.units) * agent.weights['melee_own_units_prio']
 						if unit_melee_prio > unit_ranged_prio:
@@ -720,13 +763,13 @@ while run_count > 0:
 			##Actual action
 			enemy_target = None
 			rfl_war = False
-			if agent.action_type == "rfl":
+			if agent.action_type == "rfl" or agent.action_type == "rfl_base":
 				war_priority = agent.weights['base_conflict'] - len(agent.enemies) * agent.weights['enemies_weight'] - curr_enemy_strength * agent.weights['enemy_units_weight'] - neighbors_strength * agent.weights['neutral_units_weight'] + len(agent.units) * agent.weights['own_units_weight']
 				conflict_threshold = 0		#abitrary value ideally to be around what could be achieved with the default weight values
 				if war_priority > conflict_threshold:
 					rfl_war = True
 
-			if (remaining_units > neighbors_strength / 2 and remaining_units > 4 and not agent.action_type == "rfl") or rfl_war:
+			if (remaining_units > neighbors_strength / 2 and remaining_units > 4 and not (agent.action_type == "rfl" or agent.action_type == "rfl_base")) or rfl_war:
 				best_score = 0
 				for potential_target_id, info in potential_enemies_dictionary.items():
 					if set(agents[potential_target_id].get_controlled_tiles()) & set(agent.get_unit_locations()):	#skip potential target if units in their territory
@@ -1170,9 +1213,13 @@ while run_count > 0:
 		with open("reward_function.txt", "a") as scorefile:
 			scorefile.write(str(best_rfl_score) + "\n")
 
+
 	run_time = process_time() - start_time
 
 	print("Ended simulation after turn ", turn_n, "it took", run_time, "seconds")
+
+if compete_against_old_rfl:
+	os.chdir(output_directory_rlf_vs_rfl)
 
 with open('best_weight_values.txt', 'w') as weight_file:
 	for weight_v in best_rfl_agent.weights.values():
