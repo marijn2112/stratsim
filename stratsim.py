@@ -45,7 +45,9 @@ if compete_against_old_rfl:
 change_weight_divisor = verification_runs + 1
 
 open('reward_function.txt', 'w').close()						#create/clear reward function history file
+open('run_time.txt', 'w').close()
 has_switched_weights = False
+is_switching_weights = False
 
 while run_count > 0:
 	run_count -= 1
@@ -295,7 +297,7 @@ while run_count > 0:
 					weight_values = weight_file.read().splitlines()
 				agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
 				os.chdir(output_directory)
-				has_switched_weights = True
+				is_switching_weights = True																								#only change has_switched_weights after the loop so it doesnt stop after a single agent
 			elif 'best_rfl_agent' in globals():																							#only part of this statement that changes the weights
 				print("Applying previous best agent from memory")
 				agent.weights = best_rfl_agent.weights
@@ -322,6 +324,8 @@ while run_count > 0:
 			with open('best_weight_values.txt') as weight_file:
 				weight_values = weight_file.read().splitlines()
 			agent.weights = dict(zip(weights_names_list, [float(weight) for weight in weight_values]))
+	if is_switching_weights:
+		has_switched_weights = True
 
 	### Gameplay data
 
@@ -1215,6 +1219,8 @@ while run_count > 0:
 
 
 	run_time = process_time() - start_time
+	with open("run_time.txt", "a") as perftracker:
+		perftracker.write(str(run_time) + "\n")
 
 	print("Ended simulation after turn ", turn_n, "it took", run_time, "seconds")
 
