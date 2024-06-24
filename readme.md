@@ -34,12 +34,15 @@ This section briefly explains all files the code can produce, depending on set v
 
 - reward_function.txt displays on each line the highest rfl reward score found thus far for a run of the game
 - best_weight_values.txt displays the best performing weights as found thus far
+- run_time.txt displays the time it took to run each run of the game, which can be used to compare agent type performance
 
 with disable_log set to False (all files relate only to the most recent run of the game):
 - buildings_map_turn_*n*.xlsx displays the amount of buildings in each state at turn *n*, the file shows a grid of all provinces, but as buildings are on state-level all provinces of each state contain the same value.
 - control_map_turn_*n*.xlsx displays which agent controlled each tile  at turn *n*, this includes occupation during conflict.
 - turn_log.txt stores the most notable events of each turn, including started and ended conflicts and the use of units by all agents.
 - unit_map_turn_*n*.xlsx displays the amount of units present on each tile at turn *n*, due to some limitations in the Pandas to Excel sheet conversion it is not marked what agent the units belong to, although this can be largely inferred from the control map and action log.
+
+A subfolder called rfl_vs_rfl is created in this folder when training against agents using static weights from best_weight_values.txt, in there new weights are stored which perform best against these agents to keep them seperate from those from training against rule-based ones.
 
 # The rules of the rule-based agents
 This section summarizes the logic set for the rule-based agents:
